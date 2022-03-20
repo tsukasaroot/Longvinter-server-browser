@@ -1,0 +1,23 @@
+/* Multiple databases can be set like followed */
+db1driver=mysql
+db1host=127.0.0.1
+db1name=mydb1
+db1user=root
+db1pwd=123456
+
+db2driver=mysql
+db2host=127.0.0.1
+db2name=mydb2
+db2user=root
+db2pwd=123456
+
+--------------------------------------------------
+/* Configuration of Memcache server is as followed */
+
+MEMCACHED_HOST=127.0.0.1
+MEMCACHED_PORT=11211
+
+--------------------------------------------------
+/* The following can be set to alter the default values */
+timezone=Europe/Paris   // default @Europe/Paris
+debug=false             // default @false

@@ -1,0 +1,5 @@
+vendor
+logs.txt
+.idea
+.env
+*.lock

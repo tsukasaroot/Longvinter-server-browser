@@ -1,0 +1,251 @@
+<?php
+
+require 'core/Database.php';
+require 'core/Token.php';
+require 'core/Caching.php';
+
+use Core\Database as Database;
+use Core\Token as Token;
+use Core\Caching as Caching;
+
+$env = parse_ini_file('.env');
+
+foreach ($env as $k => $v) {
+	if (str_starts_with($k, 'db'))
+		$GLOBALS['Database'][$k] = $v;
+	else
+		$GLOBALS[$k] = $v;
+}
+
+function makeController($name)
+{
+	if ($name === null) {
+		echo <<<EOF
+        php manager controller @name
+        EOF;
+		die();
+	}
+	file_put_contents('app/Controllers/' . $name . '.php', <<<EOF
+		<?php
+		
+		namespace App\Controllers;
+		class $name extends Controller
+		{
+		
+		}
+		EOF
+	);
+}
+
+function makeModel($name)
+{
+	if ($name === null) {
+		echo <<<EOF
+        php manager model @name
+        EOF;
+		die();
+	}
+	file_put_contents('app/Models/' . $name . '.php', <<<EOF
+		<?php
+		
+		namespace App\Models;
+		
+		use Core\Model;
+		class $name extends Model
+		{
+			protected string \$table = '';
+			protected string \$db = 1;
+		}
+		EOF
+	);
+}
+
+function route($argv)
+{
+	if (count($argv) < 3) {
+		helper();
+		die();
+	}
+	switch ($argv[2]) {
+		case 'add':
+			addRoute($argv);
+			break;
+		default:
+			helper();
+			break;
+	}
+}
+
+function addRoute($argv)
+{
+	if (count($argv) < 4) {
+		echo <<<EOF
+        php manager route @action @method,@route,@controller|null
+        EOF;
+		die();
+	}
+	for ($i = 3; $i < count($argv); $i++) {
+		$array = explode(',', $argv[$i]);
+		$comment = '';
+		
+		if (count($array) === 2)
+			$array[2] = "closure: function () {}";
+		else
+			$array[2] = "action: '" . $array[2] . "'";
+		$array[0] = strtolower($array[0]);
+		
+		if (count($array) === 4)
+			$comment = "\n/* $array[3] */";
+		
+		file_put_contents('routes/api.php', <<<EOF
+			$comment
+			Routes::$array[0](route: '$array[1]', $array[2]);
+			EOF
+			, FILE_APPEND | LOCK_EX);
+	}
+}
+
+function migrate(string|null $action, string|null $args)
+{
+	require 'database/Migrator.php';
+	$migrator = new Migrator();
+	
+	switch ($action) {
+		case 'refresh':
+			$migrator->doRefresh();
+			break;
+		case 'drop':
+			if (empty($args)) {
+				helper();
+				die();
+			}
+			$tables = explode(',', $args);
+			$migrator->doDrop($tables);
+			break;
+		default:
+			$migrator->doMigration();
+	}
+}
+
+function authKey(string|null $action, string|null $args)
+{
+	if (!$GLOBALS['authToken']) {
+		echo "authKey is not activated.";
+		die();
+	}
+	
+	new Token();
+	$db = new Database(1);
+	$driver = $db->getSql();
+	
+	$memcached = new Memcache();
+	if (!$memcached->addServer($GLOBALS['MEMCACHED_HOST'], $GLOBALS['MEMCACHED_PORT'])) {
+		echo 'Connection failed to Memcache server';
+		die();
+	}
+	
+	switch ($action) {
+		case 'create':
+			$date = time();
+			$token = uniqid(more_entropy: true);
+			$sql = <<<EOF
+			INSERT INTO tokens VALUES('$token',$date)
+			EOF;
+			if ($driver->query($sql)) {
+				$memcached->add($token, $date);
+				echo "Token added with success, token to use on extern app:\n$token";
+			} else {
+				echo "Error happened when inserting into table token\n";
+				echo $driver->error;
+			}
+			break;
+		case 'load':
+			$result = $driver->query('SELECT * FROM tokens');
+			$result = $result->fetch_all(MYSQLI_ASSOC);
+			for ($i = 0; $i < count($result); $i++) {
+				$memcached->add($result[$i]['token'], $result[$i]['created_at']);
+			}
+			echo 'Tokens loaded in memory';
+			break;
+		default:
+			helper();
+			break;
+	}
+}
+
+function memcached(string|null $action, string|null $args)
+{
+    if (!$GLOBALS['authToken']) {
+    	echo "authKey is not activated.";
+    	die();
+    }
+	$memcached = new Memcache();
+	if (!$memcached->addServer($GLOBALS['MEMCACHED_HOST'], $GLOBALS['MEMCACHED_PORT'])) {
+		echo 'Connection failed to Memcache server';
+		die();
+	}
+	
+	switch ($action) {
+		case 'flush';
+			$memcached->flush();
+			echo 'Memcache has been flushed';
+			break;
+		default:
+			helper();
+			break;
+	}
+}
+
+function helper()
+{
+	echo <<<EOF
+    php manager controller - Create a new controller
+    php manager model - Create a new model
+    php manager route - Add a route to routes/api.php
+    php manager migrate - Migrate all sql files inside Database/migrations/
+    php manager migrate drop @table1,@table2,...
+    php manager migrate refresh - Drop all tables present in Database/migrations/ then migrate them back
+    php manager authKey create - Create a token to use in external App
+    php manager authKey load - Loads tokens stored in database to Memcache server defined in env file
+    php manager memcache flush - Flush all data contained into Memcache server defined in env file
+    EOF;
+}
+
+function version()
+{
+    echo "V 0.1";
+}
+
+if (count($argv) === 1) {
+	helper();
+	die();
+}
+
+$call = $argv[1];
+
+switch ($call) {
+	case 'controller':
+		makeController($argv[2] ?? null);
+		break;
+	case 'model':
+		makeModel($argv[2] ?? null);
+		break;
+	case 'route':
+		route($argv);
+		break;
+	case 'migrate':
+		migrate($argv[2] ?? null, $argv[3] ?? null);
+		break;
+	case 'authKey':
+		authKey($argv[2] ?? null, $argv[3] ?? null);
+		break;
+	case 'memcache':
+		memcached($argv[2] ?? null, $argv[3] ?? null);
+		break;
+	case '--version':
+	    version();
+	    break;
+	default:
+		helper();
+		break;
+}
