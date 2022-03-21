@@ -1,12 +1,15 @@
 <?php
 
-require 'core/Database.php';
+/*require 'core/Database.php';
 require 'core/Token.php';
 require 'core/Caching.php';
+require 'core/Console.php';*/
+require 'vendor/autoload.php';
 
 use Core\Database as Database;
 use Core\Token as Token;
 use Core\Caching as Caching;
+use Core\Console as Console;
 
 $env = parse_ini_file('.env');
 
@@ -175,10 +178,10 @@ function authKey(string|null $action, string|null $args)
 
 function memcached(string|null $action, string|null $args)
 {
-    if (!$GLOBALS['authToken']) {
-    	echo "authKey is not activated.";
-    	die();
-    }
+	if (!$GLOBALS['authToken']) {
+		echo "authKey is not activated.";
+		die();
+	}
 	$memcached = new Memcache();
 	if (!$memcached->addServer($GLOBALS['MEMCACHED_HOST'], $GLOBALS['MEMCACHED_PORT'])) {
 		echo 'Connection failed to Memcache server';
@@ -194,6 +197,11 @@ function memcached(string|null $action, string|null $args)
 			helper();
 			break;
 	}
+}
+
+function execute(string $class_name, string $function, array $args = null)
+{
+	Console::run($class_name, $function);
 }
 
 function helper()
@@ -213,7 +221,7 @@ function helper()
 
 function version()
 {
-    echo "V 0.1";
+	echo "V 0.1";
 }
 
 if (count($argv) === 1) {
@@ -243,8 +251,11 @@ switch ($call) {
 		memcached($argv[2] ?? null, $argv[3] ?? null);
 		break;
 	case '--version':
-	    version();
-	    break;
+		version();
+		break;
+	case 'execute':
+		execute($argv[2] ?? null, $argv[3] ?? null);
+		break;
 	default:
 		helper();
 		break;

@@ -30,7 +30,7 @@ class Caching
 		if (isset($GLOBALS['REDIS_HOST']) && $GLOBALS['REDIS_HOST']) {
 			$this->redis = new Redis();
 			if ($this->redis->connect($GLOBALS['REDIS_HOST'], intval($GLOBALS['REDIS_PORT']))) {
-				if ($GLOBALS['REDIS_PASSWORD']) {
+				if (isset($GLOBALS['REDIS_PASSWORD']) && $GLOBALS['REDIS_PASSWORD']) {
 					$this->redis->auth($GLOBALS['REDIS_PASSWORD']);
 				}
 				$this->redis_status = true;
