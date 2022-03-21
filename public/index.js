@@ -25,9 +25,9 @@ function parse_servers(servers) {
         var cell2 = row.insertCell(2);
         var cell3 = row.insertCell(3);
 
-        $.ajax('https://ipapi.co/' + value[0] + '/json', function (data) {
+        /*$.ajax('https://ipapi.co/' + value[0] + '/json', function (data) {
             console.log(data)
-        });
+        });*/
 
         cell1.innerHTML = 'not found';
         cell2.innerHTML = value[1];
