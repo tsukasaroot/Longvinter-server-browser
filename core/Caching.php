@@ -57,12 +57,12 @@ class Caching
 		if ($method === 'redis') {
 			if ($array) {
 				foreach ($array as $k => $item) {
-					$success = $this->memcached->set($k, $item);
+					$success = $this->redis->set($k, $item);
 				}
 			}
 			
 			if ($key && $value) {
-				$success = $this->memcached->set($key, $value);
+				$success = $this->redis->set($key, $value);
 			}
 		}
 		
@@ -93,6 +93,35 @@ class Caching
 			
 			if ($key)
 				$result_array[$key] = $this->redis->get($key);
+		}
+		
+		return $result_array;
+	}
+	
+	public function get_keys(array $array = null, string $key = null, string $method = null): array
+	{
+		$result_array = [];
+		
+		if ($method === 'memcached') {
+			if ($array) {
+				foreach ($array as $item) {
+					$result_array[$item] = $this->memcached->get($item);
+				}
+			}
+			
+			if ($key)
+				$result_array[$key] = $this->memcached->get($key);
+		}
+		
+		if ($method === 'redis') {
+			if ($array) {
+				foreach ($array as $item) {
+					$result_array[$item] = $this->redis->keys($item);
+				}
+			}
+			
+			if ($key)
+				$result_array = $this->redis->keys('*');
 		}
 		
 		return $result_array;

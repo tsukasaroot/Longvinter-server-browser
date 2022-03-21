@@ -11,7 +11,8 @@
         "php": "^8.0",
         "ext-mysqli": "*",
       "ext-memcache": "*",
-      "ext-redis": "*"
+      "ext-redis": "*",
+      "ext-curl": "*"
     },
     "autoload": {
         "psr-4": {

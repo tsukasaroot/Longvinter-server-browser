@@ -10,12 +10,4 @@ Routes::post(route: '/renew_token', closure: function () {
 	$token->renewToken($token_input);
 });
 
-Routes::get(route: '/', closure: function () {
-	Http::sendJson([ 'message' => 'Welcome' ]);
-});
-
-Routes::post(route: '/', closure: function () {
-	Http::sendJson([ 'message' => 'Welcome' ]);
-});
-
-Routes::post(route: '/welcome', action: 'WelcomeController@test_post');
+Routes::get(route: '/', action: 'WelcomeController@home');

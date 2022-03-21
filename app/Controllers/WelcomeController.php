@@ -1,22 +1,25 @@
 <?php
 
 namespace App\Controllers;
-use App\Models\Users;
+
 use Core\Caching;
+use App\Models\Servers;
 
 class WelcomeController extends Controller
 {
-	public function test_post(): bool
+	public function home(): bool
 	{
-		if (empty($this->request['welcome'])) {
-			return $this->response(['error' => 'Argument not provided'], 404);
+		$servers = new Servers();
+		
+		$servers_list = $servers->get_servers_list();
+		$cleaned_list = [];
+		
+		for ($i = 0; $i < count($servers_list); $i++) {
+			$cleaned_list[$servers_list[$i]['steamid']][] = $servers_list[$i]['addr'];
+			$cleaned_list[$servers_list[$i]['steamid']][] = $servers_list[$i]['max_players'];
+			$cleaned_list[$servers_list[$i]['steamid']][] = $servers_list[$i]['os'];
 		}
-		$user = new Users();
-		$cache = new Caching();
 		
-		if ($cache->redis_status)
-			$arg = $cache->get(key: 'test', method: 'redis');
-		
-		return $this->response(['message' => 'received', 'input' => $this->request['welcome'], 'redis' => $arg]);
+		return $this->response(['servers_list' => $cleaned_list]);
 	}
 }
